@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Local prediction history is user-specific.
+prediction_history.db
