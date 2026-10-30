@@ -166,9 +166,59 @@
     font-size: 10px;
 }
 
+.methodology-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 15px;
+}
+
+.methodology-card {
+    padding: 18px;
+}
+
+.method-number {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #eef1ff;
+    color: var(--blue);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.methodology-card h3 {
+    margin: 14px 0 7px;
+    font: 700 13px Manrope, sans-serif;
+}
+
+.methodology-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.methodology-card code {
+    color: #536dfe;
+}
+
 @media (max-width: 420px) {
     .result-card.has-result {
         padding: 17px;
+    }
+
+    @media (max-width: 1050px) {
+        .methodology-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 700px) {
+        .methodology-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     .result-chip {

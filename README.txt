@@ -1,78 +1,116 @@
-STUDENT PERFORMANCE PREDICTION WEBSITE — LOCAL WINDOWS SETUP
+STUDENT PERFORMANCE PREDICTION SYSTEM
+=====================================
 
-FILES NEEDED IN ONE FOLDER
---------------------------
-app.py
-requirements.txt
-templates\index.html
-static\style.css
-student-mat.csv                  (copy your existing dataset here)
-student_performance_model.pkl    (copy your existing trained model here)
+AI/ML mini project: Student Performance Prediction (CO1–CO5)
 
-The website also creates prediction_history.db and chart PNGs automatically.
+1. PROBLEM DEFINITION
+---------------------
+The system estimates a student's final mathematics grade (G3, out of 20)
+from study time, absences, and the first two period grades (G1 and G2).
+The purpose is early academic-support decision making: the output is an
+estimate and must not be treated as a guaranteed examination outcome.
 
-STEP 1 — COPY WEBSITE FILES
----------------------------
-Extract this ZIP into:
-C:\Users\Admin\Desktop\StudentPerformancePrediction
+2. DATASET COLLECTION
+---------------------
+Dataset file: student-mat.csv
+It is the mathematics student-performance dataset with 395 student records.
+The semicolon-delimited file includes school, demographic, academic, attendance,
+and grade attributes. The application uses these columns:
 
-Allow the templates and static folders to be added. Do not delete or replace your
-existing student-mat.csv or student_performance_model.pkl files.
+  studytime  Study-time category (1 = lowest, 4 = highest)
+  absences   Number of school absences
+  G1         First-period grade (0–20)
+  G2         Second-period grade (0–20)
+  G3         Final grade / target (0–20)
 
-STEP 2 — OPEN COMMAND PROMPT IN THE PROJECT FOLDER
---------------------------------------------------
-Open the folder in File Explorer. Click the address bar, type cmd, then press Enter.
+Keep the CSV in the same folder as app.py. The app reads it locally and does not
+upload student records.
 
-STEP 3 — INSTALL THE REQUIRED PACKAGES
---------------------------------------
-Because your Jupyter Notebook already trained the model, first install Flask without
-upgrading the machine-learning libraries that created your model:
-  py -m pip install Flask
+3. DATA PREPROCESSING
+---------------------
+At startup the app:
+  - reads the semicolon-delimited CSV;
+  - verifies all five required columns;
+  - converts the four features and G3 to numeric values;
+  - removes rows incomplete in those required columns;
+  - reports original and cleaned record counts in the /api/stats response;
+  - uses only the four declared features, preventing accidental feature leakage.
 
-If the app later reports a missing package, install that package too. For a completely
-fresh Python setup, you can install all packages with:
-  py -m pip install -r requirements.txt
+4. MODEL DEVELOPMENT
+--------------------
+student_performance_model.pkl is the saved Random Forest regression model used
+for live predictions. The dashboard also fits and compares:
+  - Linear Regression (baseline)
+  - Gradient Boosting Regressor
+  - Decision Tree Regressor
+  - Optimized Random Forest Regressor
 
-Important: keep scikit-learn compatible with the version used to save the PKL model.
-A pickle/joblib model may not be compatible with every scikit-learn version.
+The comparison uses train_test_split(test_size=0.2, random_state=42), so results
+are reproducible.
 
-STEP 4 — START THE WEBSITE
---------------------------
-Run:
-  py app.py
+5. PERFORMANCE EVALUATION
+-------------------------
+The held-out test set is evaluated with:
+  - MAE (mean absolute error)
+  - MSE (mean squared error)
+  - RMSE (root mean squared error)
+  - R² score
 
-STEP 5 — OPEN IT IN YOUR BROWSER
---------------------------------
-Go to:
-  http://127.0.0.1:5000
+The dashboard displays the metrics and generates:
+  static/generated/grade_distribution.png
+  static/generated/study_time_grade.png
+  static/generated/actual_vs_predicted.png
 
-Keep the Command Prompt window open while using the website. To stop it, return to
-Command Prompt and press Ctrl+C.
+6. MODEL OPTIMIZATION
+---------------------
+The app runs GridSearchCV for a Random Forest using five-fold cross-validation
+on training data only. It searches n_estimators, max_depth, and
+min_samples_leaf, scoring candidates by negative mean absolute error. The best
+parameters and optimized test metrics are exposed at /api/metrics and shown in
+the model-comparison section.
 
-FEATURES
---------
-- Grade prediction form using studytime, absences, G1 and G2.
-- Actionable next-step guidance based on the predicted grade band.
-- Dataset summary and grade charts.
-- Actual-vs-predicted chart for the saved Random Forest model.
-- Random Forest, Linear Regression, Gradient Boosting, and Decision Tree metric comparison.
-- Prediction history saved locally in SQLite.
-- Optional JSON endpoints: /health, /api/stats, /api/metrics, and /api/predict.
+7. RESULT ANALYSIS AND DOCUMENTATION
+-------------------------------------
+The web dashboard provides:
+  - dataset summary and pass-rate descriptive statistic;
+  - grade distribution and study-time analysis charts;
+  - actual-versus-predicted visualization;
+  - model metric comparison;
+  - an input form with validation and support recommendations;
+  - locally stored prediction history in prediction_history.db.
 
-API EXAMPLE
------------
-Send a POST request to http://127.0.0.1:5000/api/predict with:
+The “Mini-project methodology” section in the dashboard maps every required
+rubric item to the implementation. Limitations include the small, subject-
+specific dataset, dependence on G1/G2 availability, and the fact that
+correlation does not establish causation.
+
+WINDOWS SETUP
+-------------
+1. Open a terminal in this folder.
+2. Install dependencies:
+
+     py -m pip install -r requirements.txt
+
+3. Start the local server:
+
+     py app.py
+
+4. Open http://127.0.0.1:5000
+
+The saved PKL model must be compatible with the installed scikit-learn version.
+If it cannot be loaded, the dashboard reports the error and still shows any
+dataset-only analytics it can calculate.
+
+API ENDPOINTS
+-------------
+GET  /health
+GET  /api/stats
+GET  /api/metrics
+POST /api/predict
+
+Example request:
+
   {"studytime": 2, "absences": 5, "g1": 12, "g2": 14}
 
-TROUBLESHOOTING
----------------
-1. If the dashboard says the dataset is missing, make sure student-mat.csv is in
-the same folder as app.py. This app reads it with sep=';'.
-2. If the trained model is missing, copy student_performance_model.pkl into the
-same folder as app.py.
-3. If model loading fails due to a scikit-learn version mismatch, check the version
-used when you trained/saved the model in Jupyter and install a compatible version.
-4. If port 5000 is already in use, close the other Flask app or change port=5000 at
-the bottom of app.py to another unused port such as 5001.
-5. This is a local educational demo. Do not expose the built-in development server
-or sensitive student data to the public internet.
+This is a local educational demonstration. Do not expose Flask's development
+server or identifiable student data to the public internet.

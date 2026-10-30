@@ -15,7 +15,7 @@ from flask import Flask, flash, jsonify, redirect, render_template, request, url
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.tree import DecisionTreeRegressor
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -38,6 +38,7 @@ model = None
 resource_errors: list[str] = []
 comparison_rows: list[dict] = []
 summary: dict = {}
+optimization_summary: dict = {}
 
 
 def get_db_connection() -> sqlite3.Connection:
@@ -110,10 +111,11 @@ def generate_charts(data: pd.DataFrame, actual: pd.Series | None = None,
 
 
 def setup_resources() -> None:
-    global df, model, resource_errors, comparison_rows, summary
+    global df, model, resource_errors, comparison_rows, summary, optimization_summary
     resource_errors = []
     comparison_rows = []
     summary = {}
+    optimization_summary = {}
 
     if not DATASET_PATH.exists():
         resource_errors.append(
@@ -126,10 +128,19 @@ def setup_resources() -> None:
             missing = required.difference(loaded_df.columns)
             if missing:
                 raise ValueError("Expected columns are missing: " + ", ".join(sorted(missing)))
-            df = loaded_df
+            original_rows = len(loaded_df)
+            cleaned_df = loaded_df.copy()
+            for column in FEATURES + [TARGET]:
+                cleaned_df[column] = pd.to_numeric(cleaned_df[column], errors="coerce")
+            cleaned_df = cleaned_df.dropna(subset=FEATURES + [TARGET]).reset_index(drop=True)
+            if cleaned_df.empty:
+                raise ValueError("No complete numeric rows remain after preprocessing.")
+            df = cleaned_df
             summary = {
                 "rows": int(len(df)),
                 "columns": int(len(df.columns)),
+                "original_rows": int(original_rows),
+                "removed_rows": int(original_rows - len(df)),
                 "average_grade": round(float(df[TARGET].mean()), 2),
                 "pass_rate": round(float((df[TARGET] >= 10).mean() * 100), 1),
                 "mean_absences": round(float(df["absences"].mean()), 1),
@@ -203,6 +214,32 @@ def setup_resources() -> None:
                     "rmse": round(float(np.sqrt(mean_squared_error(y_test, estimator_pred))), 3),
                     "r2": round(float(r2_score(y_test, estimator_pred)), 3),
                 })
+            # Tune the deployed model family on training data only to avoid test-set leakage.
+            search = GridSearchCV(
+                RandomForestRegressor(random_state=42, n_jobs=-1),
+                param_grid={
+                    "n_estimators": [100, 200],
+                    "max_depth": [None, 8],
+                    "min_samples_leaf": [1, 2],
+                },
+                scoring="neg_mean_absolute_error",
+                cv=5,
+                n_jobs=-1,
+            )
+            search.fit(X_train, y_train)
+            optimized_pred = search.best_estimator_.predict(X_test)
+            comparison_rows.append({
+                "algorithm": "Optimized Random Forest",
+                "mae": round(float(mean_absolute_error(y_test, optimized_pred)), 3),
+                "mse": round(float(mean_squared_error(y_test, optimized_pred)), 3),
+                "rmse": round(float(np.sqrt(mean_squared_error(y_test, optimized_pred))), 3),
+                "r2": round(float(r2_score(y_test, optimized_pred)), 3),
+            })
+            optimization_summary = {
+                "method": "GridSearchCV with 5-fold cross-validation",
+                "scoring": "negative mean absolute error",
+                "best_parameters": search.best_params_,
+            }
             if model is None:
                 generate_charts(df)
         except Exception as exc:
@@ -302,6 +339,7 @@ def dashboard():
         dataset_ready=df is not None,
         summary=summary,
         comparisons=comparison_rows,
+        optimization=optimization_summary,
         prediction=prediction,
         entered=entered,
         history=history,
@@ -325,7 +363,12 @@ def api_stats():
 
 @app.get("/api/metrics")
 def api_metrics():
-    return jsonify({"models": comparison_rows, "test_split": "80:20", "random_state": 42})
+    return jsonify({
+        "models": comparison_rows,
+        "test_split": "80:20",
+        "random_state": 42,
+        "optimization": optimization_summary,
+    })
 
 
 @app.post("/api/predict")

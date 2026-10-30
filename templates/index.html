@@ -19,6 +19,7 @@
         <a class="nav-link" href="#predict"><span class="nav-icon">✳</span> Grade prediction</a>
         <a class="nav-link" href="#analytics"><span class="nav-icon">▥</span> Analytics</a>
         <a class="nav-link" href="#comparison"><span class="nav-icon">⇄</span> Model comparison</a>
+        <a class="nav-link" href="#methodology"><span class="nav-icon">◎</span> Methodology</a>
         <a class="nav-link" href="#history"><span class="nav-icon">◷</span> Prediction history</a>
       </nav>
       <div class="sidebar-bottom">
@@ -147,11 +148,25 @@
           <div class="table-wrap"><table>
             <thead><tr><th>Algorithm</th><th>MAE ↓</th><th>MSE ↓</th><th>RMSE ↓</th><th>R² Score ↑</th></tr></thead>
             <tbody>
-            {% for row in comparisons %}<tr><td><span class="algorithm-icon {{ 'rf' if row.algorithm == 'Random Forest' else 'lr' }}">{{ 'RF' if row.algorithm == 'Random Forest' else ('GB' if row.algorithm == 'Gradient Boosting' else ('DT' if row.algorithm == 'Decision Tree' else 'LR')) }}</span><strong>{{ row.algorithm }}</strong></td><td>{{ '%.3f'|format(row.mae) }}</td><td>{{ '%.3f'|format(row.mse) }}</td><td>{{ '%.3f'|format(row.rmse) }}</td><td>{{ '%.3f'|format(row.r2) }}</td></tr>{% else %}<tr><td colspan="5" class="empty-cell">Metrics are unavailable until the dataset and model load correctly.</td></tr>{% endfor %}
+            {% for row in comparisons %}<tr><td><span class="algorithm-icon {{ 'rf' if 'Forest' in row.algorithm else 'lr' }}">{{ 'RF' if 'Forest' in row.algorithm else ('GB' if row.algorithm == 'Gradient Boosting' else ('DT' if row.algorithm == 'Decision Tree' else 'LR')) }}</span><strong>{{ row.algorithm }}</strong></td><td>{{ '%.3f'|format(row.mae) }}</td><td>{{ '%.3f'|format(row.mse) }}</td><td>{{ '%.3f'|format(row.rmse) }}</td><td>{{ '%.3f'|format(row.r2) }}</td></tr>{% else %}<tr><td colspan="5" class="empty-cell">Metrics are unavailable until the dataset and model load correctly.</td></tr>{% endfor %}
             </tbody>
           </table></div>
-          <p class="table-footnote">The dashboard evaluates the saved Random Forest model and fits a Linear Regression baseline using the notebook's 80:20 split and random_state=42. Metrics can differ if your notebook used different data or settings.</p>
+          <p class="table-footnote">The dashboard evaluates the saved model and benchmark models using an 80:20 split (random_state=42). The optimized Random Forest uses 5-fold GridSearchCV on training data only. {{ optimization.get('method', '') }}.</p>
         </article>
+      </section>
+
+      <section id="methodology" class="section-block">
+        <div class="section-heading"><div><div class="eyebrow">PROJECT DOCUMENTATION</div><h2>Mini-project methodology</h2></div><span class="muted-caption">CO1–CO5 evidence</span></div>
+        <div class="methodology-grid">
+          <article class="panel methodology-card"><span class="method-number">01</span><h3>Problem definition</h3><p>Estimate a student's final mathematics grade (G3 out of 20) early enough to support timely academic intervention. This is a decision-support estimate, not a guaranteed result.</p></article>
+          <article class="panel methodology-card"><span class="method-number">02</span><h3>Dataset collection</h3><p>The local <code>student-mat.csv</code> file contains 395 mathematics student records with demographic, school, attendance, study-time, period-grade, and final-grade attributes.</p></article>
+          <article class="panel methodology-card"><span class="method-number">03</span><h3>Data preprocessing</h3><p>Only studytime, absences, G1, and G2 are used as model features. These columns and G3 are converted to numeric values; incomplete rows are removed before the reproducible 80:20 split.</p></article>
+          <article class="panel methodology-card"><span class="method-number">04</span><h3>Model development</h3><p>The system loads the saved Random Forest regressor and compares it with Linear Regression, Gradient Boosting, and Decision Tree regressors.</p></article>
+          <article class="panel methodology-card"><span class="method-number">05</span><h3>Performance evaluation</h3><p>MAE, MSE, RMSE, and R² are calculated on the held-out test set. The dashboard also visualizes grade distribution, study time, and actual versus predicted grades.</p></article>
+          <article class="panel methodology-card"><span class="method-number">06</span><h3>Model optimization</h3><p>GridSearchCV evaluates Random Forest hyperparameters with five-fold cross-validation on training data only, selecting the configuration with the lowest validation MAE.</p></article>
+          <article class="panel methodology-card"><span class="method-number">07</span><h3>Result analysis</h3><p>Use the metric table to compare errors, the charts to inspect patterns, and the prediction panel to translate an estimate into an actionable support recommendation.</p></article>
+          <article class="panel methodology-card"><span class="method-number">08</span><h3>Documentation</h3><p>README.txt records setup, data fields, workflow, evaluation protocol, limitations, and reproducibility steps. The dashboard exposes the same evidence during a demonstration.</p></article>
+        </div>
       </section>
 
       <section id="history" class="section-block">
